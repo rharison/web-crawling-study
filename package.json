@@ -18,5 +18,8 @@
   "homepage": "https://github.com/rharison/web-crawling-study#readme",
   "dependencies": {
     "puppeteer": "^15.4.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19"
   }
 }
