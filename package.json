@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/rharison/web-crawling-study/issues"
   },
-  "homepage": "https://github.com/rharison/web-crawling-study#readme"
+  "homepage": "https://github.com/rharison/web-crawling-study#readme",
+  "dependencies": {
+    "puppeteer": "^15.4.0"
+  }
 }
