@@ -91,6 +91,5 @@ async function startCrawling() {
   await browser.close();
 }
 
-(async () => {
-  startCrawling();
-})()
+
+startCrawling();
