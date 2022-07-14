@@ -1,6 +1,8 @@
 import { Cluster } from 'puppeteer-cluster'
+import puppeteer from 'puppeteer-extra'
+import StealthPlugin from 'puppeteer-extra-plugin-stealth'
+import randomUseragent from 'random-useragent'
 import fs from 'fs'
-import userAgent from 'user-agents';
 let BD = {}
 
 async function clearBrowser (page) {
@@ -12,11 +14,20 @@ async function clearBrowser (page) {
 async function getRelateds({ page, data: { url, name } }) {
   if (BD[name]) return
   await clearBrowser(page);
-  await page.setUserAgent(userAgent.toString())
+  const userAgent = randomUseragent.getRandom();
+  await page.setUserAgent(userAgent)
+  await page.setViewport({
+    width: 1920 + Math.floor(Math.random() * 100),
+    height: 3000 + Math.floor(Math.random() * 100),
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    isLandscape: false,
+    isMobile: false,
+  });
+  await page.setJavaScriptEnabled(true);
+  await page.setDefaultNavigationTimeout(0);
   await page.goto(url, { waitUntil: 'networkidle2' })
-  await page.waitForTimeout(20000)
-
-  await clearBrowser(page);
+  await page.waitForTimeout(1000000)
   console.log('Collecting relateds...');
 
   const selectorAllLinksWithDataVed = 'a[data-ved]';
@@ -66,7 +77,7 @@ async function getRelateds({ page, data: { url, name } }) {
 
 function getUrlForCrawling(type, query) {
   const urls = {
-    search: `https://www.google.com/search?q=${query}`
+    search: `https://www.google.com.br/search?q=${query}`
   }
 
   return urls[type];
@@ -76,17 +87,20 @@ async function startCrawling(data) {
   console.log('Data: ', data)
   const pid = process.pid
   try {
-
+    puppeteer.use(StealthPlugin())
     const cluster = await Cluster.launch({
       concurrency: Cluster.CONCURRENCY_CONTEXT,
       maxConcurrency: 1,
-      //monitor: true,
+      puppeteer,
       puppeteerOptions: {
         headless: false,
+        args: [
+          `--proxy-server=http://34.171.113.206:3128`,
+        ]
       },
     })
-   
     await cluster.task(getRelateds)
+
     if(data?.length) {
       data.forEach(name => {
         const queryForSearch = name.replace(/ /g,'+');

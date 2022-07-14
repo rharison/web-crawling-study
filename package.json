@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon src/index.js",
     "cluster": "nodemon src/cluster.js",
-    "cluster-extra": "nodemon src/cluster-extra.js"
+    "cluster-extra": "nodemon src/cluster-extra.js",
+    "cluster-tor": "nodemon src/cluster-tor.js"
   },
   "nodemonConfig": {
     "ignore": [
