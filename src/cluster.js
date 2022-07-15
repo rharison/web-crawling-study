@@ -1,9 +1,16 @@
 import { Cluster } from 'puppeteer-cluster'
 import puppeteer from 'puppeteer-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import randomUseragent from 'random-useragent'
+import UserAgent from 'user-agents';
 import fs from 'fs'
 let BD = {}
+
+function getUserAgent() {
+  const userAgent = new UserAgent({
+    deviceCategory: 'desktop',
+  });
+  return userAgent.toString();
+}
 
 async function clearBrowser (page) {
   const client = await page.target().createCDPSession()
@@ -11,31 +18,31 @@ async function clearBrowser (page) {
   await client.send('Network.clearBrowserCache');
 }
 
-async function getRelateds({ page, data: { url, name } }) {
-  if (BD[name]) return
+async function preparePage(page) {
+  console.log('Preparing page...');
   await clearBrowser(page);
-  const userAgent = randomUseragent.getRandom();
-  await page.setUserAgent(userAgent)
-  await page.setViewport({
-    width: 1920 + Math.floor(Math.random() * 100),
-    height: 3000 + Math.floor(Math.random() * 100),
-    deviceScaleFactor: 1,
-    hasTouch: false,
-    isLandscape: false,
-    isMobile: false,
-  });
+  await page.setUserAgent(getUserAgent())
   await page.setJavaScriptEnabled(true);
   await page.setDefaultNavigationTimeout(0);
-  await page.goto(url, { waitUntil: 'networkidle2' })
-  await page.waitForTimeout(1000000)
-  console.log('Collecting relateds...');
+}
 
+async function getRelateds({ page, data: { url, name } }) {
+  if (BD[name]) {
+    console.log('Already crawled ===> ', name)
+    return
+  }
+
+  await preparePage(page)
+  await page.goto(url, { waitUntil: 'networkidle2' })
+
+  console.log('Collecting relateds...');
   const selectorAllLinksWithDataVed = 'a[data-ved]';
   const textFromLinkRelateds = 'Pesquisas relacionadas'
 
     await page.waitForSelector(selectorAllLinksWithDataVed, {timeout: 5000})
-    .catch(err => {
-      return []
+    .catch((err) => {
+      console.log('Timeout for selectorAllLinksWithDataVed --- Error: ', err);
+      return [];
     })
 
   const isClicked = await page.evaluate((selectorAllLinksWithDataVed, textFromLinkRelateds) => {
@@ -71,7 +78,7 @@ async function getRelateds({ page, data: { url, name } }) {
   }, selectorContainerRelateds, selectorRelateds)
 
   BD[name] = relateds;
-  fs.writeFileSync('./json/bd4.json', JSON.stringify(BD, null, 2));
+  fs.writeFileSync('./json/bd5.json', JSON.stringify(BD, null, 2));
   startCrawling(relateds);
 }
 
@@ -83,22 +90,34 @@ function getUrlForCrawling(type, query) {
   return urls[type];
 }
 
+let cluster
+
+async function getClustes(){
+  puppeteer.use(StealthPlugin())
+
+  if(cluster){
+    return cluster
+  }
+  cluster = await Cluster.launch({
+    concurrency: Cluster.CONCURRENCY_CONTEXT,
+    maxConcurrency: 1,
+    puppeteer,
+    puppeteerOptions: {
+      headless: false,
+      args: [
+        //`--proxy-server=http://34.95.227.42:3128`,
+      ]
+    },
+  })
+
+  return cluster
+}
+
 async function startCrawling(data) {
   console.log('Data: ', data)
   const pid = process.pid
   try {
-    puppeteer.use(StealthPlugin())
-    const cluster = await Cluster.launch({
-      concurrency: Cluster.CONCURRENCY_CONTEXT,
-      maxConcurrency: 1,
-      puppeteer,
-      puppeteerOptions: {
-        headless: false,
-        args: [
-          `--proxy-server=http://34.171.113.206:3128`,
-        ]
-      },
-    })
+    cluster = await getClustes()
     await cluster.task(getRelateds)
 
     if(data?.length) {
