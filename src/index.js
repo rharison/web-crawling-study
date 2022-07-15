@@ -87,7 +87,7 @@ async function startCrawling() {
   const collectedData = await collectData(page, initialMainName);
 
   console.log(JSON.stringify(collectedData, null, 2));
-  
+
   await browser.close();
 }
 
